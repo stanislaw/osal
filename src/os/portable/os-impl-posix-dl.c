@@ -33,6 +33,9 @@
  *   dlsym()
  */
 
+#include <limits.h>
+#include <unistd.h>
+
 /****************************************************************************************
                                      DEFINES
  ***************************************************************************************/
@@ -123,7 +126,16 @@ int32 OS_SymbolLookup_Impl( cpuaddr *SymbolAddress, const char *SymbolName )
      * call dlerror() to clear any prior error that might have occured.
      */
     dlerror();
-    Function = dlsym((void *)0, SymbolName);
+
+    /// TODO-MAC:
+    /// [BEGIN] 04 OS_SymbolLookup
+    /// [ PASS] 04.001 ut_osloader_symtable_test.c:149 - #1 Invalid-pointer-arg-1
+    /// [ PASS] 04.002 ut_osloader_symtable_test.c:158 - #2 Invalid-pointer-arg-2
+    /// [ PASS] 04.003 ut_osloader_symtable_test.c:167 - #3 Symbol-not-found
+    /// Current working dir: /sandbox/cFS/osal/build.commandline.dir
+    /// [ FAIL] 04.004 ut_osloader_symtable_test.c:186 - #4 Nominal
+    /// [  END] 04 OS_SymbolLookup      TOTAL::4     PASS::3     FAIL::1      MIR::0      TSF::0      N/A::0
+    Function = dlsym((void *)RTLD_DEFAULT, SymbolName);
     dlError = dlerror();
     if( dlError == NULL )
     {
@@ -156,8 +168,30 @@ int32 OS_ModuleLoad_Impl ( uint32 module_id, const char *translated_path )
     int32 status = OS_ERROR;
 
 #if (OS_MAX_MODULES > 0)
+
+   /// TODO-MAC: dlopen final paths so we are transforming translated_path
+   /// which is typically "./eeprom1/MODULE0.dylib" to a full path something like
+   /// "/sandbox/cFS/osal/cmake-build-debug/eeprom1/MODULE0.dylib".
+   /// cwd is a bad solution to this problem but it works for now in terminal and
+   /// in CLion.
+   char cwd[PATH_MAX];
+   if (getcwd(cwd, sizeof(cwd)) != NULL) {
+     printf("Current working dir: %s\n", cwd);
+   } else {
+     perror("getcwd() error");
+   }
+
+   char final_path[1024] = { '\0' };
+   strncpy(final_path, cwd, strlen(cwd));
+   final_path[strlen(cwd)] = '/';
+   strncpy(final_path + strlen(cwd) + 1, translated_path, strlen(translated_path));
+
+   if (access(final_path, F_OK ) == -1) {
+     printf("warning: file does not exist, dlopen will not work: %s\n", final_path);
+   }
+
    dlerror();
-   OS_impl_module_table[module_id].dl_handle = dlopen(translated_path, RTLD_NOW | RTLD_GLOBAL);
+   OS_impl_module_table[module_id].dl_handle = dlopen(final_path, RTLD_NOW | RTLD_GLOBAL);
    if (OS_impl_module_table[module_id].dl_handle != NULL)
    {
        status = OS_SUCCESS;

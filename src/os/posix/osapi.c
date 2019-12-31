@@ -25,6 +25,13 @@
  ***************************************************************************************/
 
 #include "os-posix.h"
+
+#include <posix-mac-time.h>
+#include <posix-mac-semaphore2-debug.h>
+#include <posix-mac-stubs.h>
+#include <posix-mac-pthread.h>
+
+#include <assert.h>
 #include <sched.h>
 
 /*
@@ -87,7 +94,7 @@ typedef struct
 
 typedef struct
 {
-    sem_t           id;
+    mac_sem2_t id;
 }OS_impl_countsem_internal_record_t;
 
 /* Mutexes */
@@ -100,7 +107,7 @@ typedef struct
 typedef struct
 {
     bool            is_async;
-    sem_t           data_sem;
+    mac_sem2_t      data_sem;
     int             out_fd;
 }OS_impl_console_internal_record_t;
 
@@ -1465,6 +1472,7 @@ int32 OS_BinSemCreate_Impl (uint32 sem_id, uint32 initial_value, uint32 options)
     mutex_created = 0;
     cond_created = 0;
     sem = &OS_impl_bin_sem_table[sem_id];
+    memset(sem, 0, sizeof (*sem));
     do
     {
         /*
@@ -1522,7 +1530,6 @@ int32 OS_BinSemCreate_Impl (uint32 sem_id, uint32 initial_value, uint32 options)
          ** fill out the proper OSAL table fields
          */
 
-        memset(sem, 0, sizeof (*sem));
         sem->current_value = initial_value;
 
         return_code = OS_SUCCESS;
@@ -1834,7 +1841,7 @@ int32 OS_CountSemCreate_Impl (uint32 sem_id, uint32 sem_initial_value, uint32 op
         return OS_INVALID_SEM_VALUE;
     }
 
-    if (sem_init(&OS_impl_count_sem_table[sem_id].id, 0, sem_initial_value) < 0)
+    if (mac_sem2_debug_init(&OS_impl_count_sem_table[sem_id].id, 0, sem_initial_value) < 0)
     {
         return OS_SEM_FAILURE;
     }
@@ -1854,7 +1861,7 @@ int32 OS_CountSemCreate_Impl (uint32 sem_id, uint32 sem_initial_value, uint32 op
  *-----------------------------------------------------------------*/
 int32 OS_CountSemDelete_Impl (uint32 sem_id)
 {
-    if (sem_destroy(&OS_impl_count_sem_table[sem_id].id) < 0)
+    if (mac_sem2_debug_destroy(&OS_impl_count_sem_table[sem_id].id) < 0)
     {
         return OS_SEM_FAILURE;
     }
@@ -1874,7 +1881,7 @@ int32 OS_CountSemDelete_Impl (uint32 sem_id)
  *-----------------------------------------------------------------*/
 int32 OS_CountSemGive_Impl ( uint32 sem_id )
 {
-    if (sem_post(&OS_impl_count_sem_table[sem_id].id) < 0)
+    if (mac_sem2_debug_post(&OS_impl_count_sem_table[sem_id].id) < 0)
     {
         return OS_SEM_FAILURE;
     }
@@ -1894,7 +1901,7 @@ int32 OS_CountSemGive_Impl ( uint32 sem_id )
  *-----------------------------------------------------------------*/
 int32 OS_CountSemTake_Impl ( uint32 sem_id )
 {
-    if (sem_wait(&OS_impl_count_sem_table[sem_id].id) < 0)
+    if (mac_sem2_debug_wait(&OS_impl_count_sem_table[sem_id].id) < 0)
     {
         return OS_SEM_FAILURE;
     }
@@ -1921,7 +1928,7 @@ int32 OS_CountSemTimedWait_Impl ( uint32 sem_id, uint32 msecs )
     */
    OS_CompAbsDelayTime(msecs, &ts);
 
-   if (sem_timedwait(&OS_impl_count_sem_table[sem_id].id, &ts) == 0)
+   if (mac_sem2_debug_timedwait(&OS_impl_count_sem_table[sem_id].id, &ts) == 0)
    {
        result = OS_SUCCESS;
    }
@@ -1951,7 +1958,7 @@ int32 OS_CountSemGetInfo_Impl (uint32 sem_id, OS_count_sem_prop_t *count_prop)
 {
     int sval;
 
-    if (sem_getvalue(&OS_impl_count_sem_table[sem_id].id, &sval) < 0)
+    if (mac_sem2_debug_getvalue(&OS_impl_count_sem_table[sem_id].id, &sval) < 0)
     {
         return OS_SEM_FAILURE;
     }
@@ -2425,7 +2432,7 @@ void  OS_ConsoleWakeup_Impl(uint32 local_id)
     if (local->is_async)
     {
         /* post the sem for the utility task to run */
-        sem_post(&local->data_sem);
+        mac_sem2_debug_post(&local->data_sem);
     }
     else
     {
@@ -2452,7 +2459,7 @@ static void*  OS_ConsoleTask_Entry(void* arg)
     while (true)
     {
         OS_ConsoleOutput_Impl(local_arg.value);
-        sem_wait(&local->data_sem);
+        mac_sem2_debug_wait(&local->data_sem);
     }
     return NULL;
 } /* end OS_ConsoleTask_Entry */
@@ -2480,7 +2487,7 @@ int32 OS_ConsoleCreate_Impl(uint32 local_id)
 
         if (local->is_async)
         {
-            if (sem_init(&OS_impl_console_table[local_id].data_sem, 0, 0) < 0)
+            if (mac_sem2_debug_init(&OS_impl_console_table[local_id].data_sem, 0, 0) < 0)
             {
                 return_code = OS_SEM_FAILURE;
             }
@@ -2492,7 +2499,7 @@ int32 OS_ConsoleCreate_Impl(uint32 local_id)
 
                 if (return_code != OS_SUCCESS)
                 {
-                    sem_destroy(&OS_impl_console_table[local_id].data_sem);
+                    mac_sem2_debug_destroy(&OS_impl_console_table[local_id].data_sem);
                 }
             }
         }

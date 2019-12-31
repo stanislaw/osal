@@ -1,6 +1,30 @@
 cmake_minimum_required(VERSION 2.6.4)
 project(OSAL C)
 
+# TODO-MAC:
+# This enforces the cwd() to be in the ${CMAKE_BINARY_DIR}. This needed for
+# deterministic calculation of full path to MODULE*.dylib libraries when running
+# from CLion.
+# https://stackoverflow.com/a/38166227/598057
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+
+# TODO/MAC: Quick fix to resolve the error:
+# In file included from /sandbox/cFS/osal/src/bsp/pc-linux/ut-src/bsp_ut_voltab.c:21:
+#/sandbox/cFS/osal/src/os/inc/osapi.h:89:10: fatal error: 'osconfig.h' file not found
+##include "osconfig.h"
+#         ^~~~~~~~~~~~
+include_directories(
+  src/bsp/pc-linux/config
+)
+
+# TODO-MAC: Defining this globally but can be made more focused.
+# In file included from /sandbox/cFS/osal/src/os/posix/osloader.c:32:
+#/sandbox/cFS/osal/src/os/posix/../portable/os-impl-posix-dl.c:130:30: error: use of undeclared identifier 'RTLD_DEFAULT'
+#    Function = dlsym((void *)RTLD_DEFAULT, SymbolName);
+#                             ^
+# 1 error generated.
+add_definitions("-D_DARWIN_C_SOURCE")
+
 enable_testing()
 
 # Generic function for consistent definition of a unit testing target
@@ -16,7 +40,10 @@ function(add_osal_ut_exe TGTNAME)
   # It is not an issue for UT builds that use OSAL stubs or no OSAL at all.
   set_target_properties(${TGTNAME} PROPERTIES COMPILE_DEFINITIONS "_UNIT_TEST_")
   set_target_properties(${TGTNAME} PROPERTIES COMPILE_FLAGS "${UT_C_FLAGS}")  
-  set_target_properties(${TGTNAME} PROPERTIES LINK_FLAGS "${UT_C_FLAGS} -u OS_VolumeTable -u OS_Application_Startup")  
+
+  # TODO-MAC
+  # set_target_properties(${TGTNAME} PROPERTIES LINK_FLAGS "${UT_C_FLAGS} -u OS_VolumeTable -u OS_Application_Startup")
+
   target_link_libraries(${TGTNAME} ut_assert osal)
   add_test(${TGTNAME} ${TGTNAME})
   foreach(TGT ${INSTALL_TARGET_LIST})
@@ -152,8 +179,10 @@ if (OSAL_SELECTED_BSPTYPE)
   aux_source_directory(src/bsp/${OSAL_SELECTED_BSPTYPE}/src BSPFILES)
 endif (OSAL_SELECTED_BSPTYPE)
 
+# TODO-MAC
+add_subdirectory(posix-mac-addons)
 add_library(osal STATIC ${OSALFILES} ${BSPFILES})
-target_link_libraries(osal ${OSAL_LINK_LIBS})
+target_link_libraries(osal ${OSAL_LINK_LIBS} posix-mac-addons)
 
 # Determine if this build is standalone or part of a larger build
 # If this is part of a larger build, certain key values will be exported to the parent
