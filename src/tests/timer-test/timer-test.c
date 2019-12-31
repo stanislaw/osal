@@ -129,6 +129,7 @@ void TimerTestTask(void)
        UtAssert_True(TimerStatus[i] == OS_SUCCESS, "Timer %d programmed RC=%d", i, (int)TimerStatus[i]);
    }
 
+   /// TODO/MAC: Does this kind of test really need to be 30 seconds long?
    /*
    ** Let the main thread sleep 
    */     

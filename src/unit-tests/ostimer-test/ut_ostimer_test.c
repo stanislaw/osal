@@ -212,7 +212,8 @@ void UT_timertest_task(void)
 
    UT_os_teardown("ut_ostimer");
 
-   OS_ApplicationShutdown(true);
+   /// TODO-MAC: potential race condition between two ways of exit()
+   /// OS_ApplicationShutdown(true);
    OS_ApplicationExit(g_logInfo.nFailed > 0);
 }
 

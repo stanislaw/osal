@@ -1,1 +1,5 @@
 build/inc/
+build.commandline.dir/
+cmake-build-debug
+*.txt
+!CMakeLists.txt

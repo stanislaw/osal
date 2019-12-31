@@ -122,7 +122,7 @@ int32 OS_SymbolLookup_Impl( cpuaddr *SymbolAddress, const char *SymbolName )
      * call dlerror() to clear any prior error that might have occured.
      */
     dlerror();
-    Function = dlsym((void *)0, SymbolName);
+    Function = dlsym((void *)RTLD_DEFAULT, SymbolName);
     dlError = dlerror();
     if( dlError == NULL )
     {
@@ -150,13 +150,40 @@ int32 OS_SymbolLookup_Impl( cpuaddr *SymbolAddress, const char *SymbolName )
  *           See description in os-impl.h for argument/return detail
  *
  *-----------------------------------------------------------------*/
+#include <unistd.h>
+#include <stdio.h>
+#include <limits.h>
+#include <assert.h>
+
 int32 OS_ModuleLoad_Impl ( uint32 module_id, char *translated_path )
 {
     int32 status = OS_ERROR;
 
 #if (OS_MAX_MODULES > 0)
+
+   /// TODO-MAC: dlopen final paths so we are transforming translated_path
+   /// which is typically "./eeprom1/MODULE0.dylib" to a full path something like
+   /// "/sandbox/cFS/osal/cmake-build-debug/unit-tests/osloader-test/./eeprom1/MODULE0.dylib".
+   /// cwd is a bad solution to this problem but it works for now in terminal and
+   /// in CLion.
+   char cwd[PATH_MAX];
+   if (getcwd(cwd, sizeof(cwd)) != NULL) {
+     printf("Current working dir: %s\n", cwd);
+   } else {
+     perror("getcwd() error");
+   }
+
+   char final_path[1024] = { '\0' };
+   strncpy(final_path, cwd, strlen(cwd));
+   final_path[strlen(cwd)] = '/';
+   strncpy(final_path + strlen(cwd) + 1, translated_path, strlen(translated_path));
+
+   if (access(final_path, F_OK ) == -1) {
+     printf("warning: file does not exist, dlopen will not work: %s\n", final_path);
+   }
+
    dlerror();
-   OS_impl_module_table[module_id].dl_handle = dlopen(translated_path, RTLD_NOW | RTLD_GLOBAL);
+   OS_impl_module_table[module_id].dl_handle = dlopen(final_path, RTLD_NOW | RTLD_GLOBAL);
    if (OS_impl_module_table[module_id].dl_handle != NULL)
    {
        status = OS_SUCCESS;

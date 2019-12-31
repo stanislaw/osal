@@ -25,6 +25,9 @@
 
 #include "os-posix.h"
 
+#include <posix-mac-stubs.h>
+#include <posix-mac-timer.h>
+
 /****************************************************************************************
                                 EXTERNAL FUNCTION PROTOTYPES
  ***************************************************************************************/
@@ -144,7 +147,10 @@ static uint32 OS_TimeBase_SigWaitImpl(uint32 timer_id)
 
     local = &OS_impl_timebase_table[timer_id];
 
-    ret = sigwait(&local->sigset, &sig);
+    /// TODO-MAC: Replacing sigwait with a custom timer_poll to poll for timer
+    /// TODO-MAC: ticks.
+    /// ret = sigwait(&local->sigset, &sig);
+    ret = timer_poll(local->host_timerid);
 
     if (ret != 0)
     {

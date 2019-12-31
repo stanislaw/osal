@@ -73,6 +73,9 @@
 
 #define UT_OS_SET_TEST_RESULT_MACRO(VAR1, TSTIDX, TSTNAME, TSTRESULT)  \
 {                                                                      \
+    if (strcmp(TSTRESULT, UT_OS_PASSED) == 0) { printf("Test passed: %s %s:%d\n", TSTNAME, __FILE__, __LINE__); } \
+    if (strcmp(TSTRESULT, UT_OS_FAILED) == 0) { printf("Test failed: %s %s:%d\n", TSTNAME, __FILE__, __LINE__); } \
+    if (strcmp(TSTRESULT, UT_OS_TSF) == 0) { printf("Test setup failure: %s %s:%d\n", TSTNAME, __FILE__, __LINE__); } \
     memset(&(VAR1.tests[TSTIDX]), 0x00, sizeof(UT_OsTestDesc_t));      \
     strncpy(VAR1.tests[TSTIDX].name, TSTNAME, strlen(TSTNAME));        \
     strncpy(VAR1.tests[TSTIDX].result, TSTRESULT, strlen(TSTRESULT));  \
