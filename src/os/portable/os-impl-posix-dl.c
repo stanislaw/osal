@@ -33,6 +33,9 @@
  *   dlsym()
  */
 
+#include <limits.h>
+#include <unistd.h>
+
 /****************************************************************************************
                                      DEFINES
  ***************************************************************************************/
@@ -123,7 +126,16 @@ int32 OS_SymbolLookup_Impl( cpuaddr *SymbolAddress, const char *SymbolName )
      * call dlerror() to clear any prior error that might have occured.
      */
     dlerror();
-    Function = dlsym((void *)0, SymbolName);
+
+    /// TODO-MAC:
+    /// [BEGIN] 04 OS_SymbolLookup
+    /// [ PASS] 04.001 ut_osloader_symtable_test.c:149 - #1 Invalid-pointer-arg-1
+    /// [ PASS] 04.002 ut_osloader_symtable_test.c:158 - #2 Invalid-pointer-arg-2
+    /// [ PASS] 04.003 ut_osloader_symtable_test.c:167 - #3 Symbol-not-found
+    /// Current working dir: /sandbox/cFS/osal/build.commandline.dir
+    /// [ FAIL] 04.004 ut_osloader_symtable_test.c:186 - #4 Nominal
+    /// [  END] 04 OS_SymbolLookup      TOTAL::4     PASS::3     FAIL::1      MIR::0      TSF::0      N/A::0
+    Function = dlsym((void *)RTLD_DEFAULT, SymbolName);
     dlError = dlerror();
     if( dlError == NULL )
     {
