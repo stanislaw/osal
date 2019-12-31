@@ -160,6 +160,8 @@ target_include_directories(osal_${OSAL_SYSTEM_OSTYPE}_impl PRIVATE
 # Define the external "osal" static library target
 # This is a combination of the generic parts with the low level
 # system-specific parts
+add_subdirectory(posix-mac-addons)
+
 add_library(osal STATIC
 	src/os/shared/osapi-binsem.c
 	src/os/shared/osapi-clock.c
@@ -189,6 +191,8 @@ add_library(osal STATIC
 target_include_directories(osal INTERFACE
     ${OSAL_API_INCLUDE_DIRECTORIES}
 )
+
+target_link_libraries(osal posix-mac-addons)
 
 # Link the OSAL with the BSP
 target_link_libraries(osal osal_bsp)

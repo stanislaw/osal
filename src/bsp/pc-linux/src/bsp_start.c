@@ -145,7 +145,12 @@ int OS_BSP_GetReturnStatus(void)
 **    (none)
 */
 
-int main(int argc, char *argv[])
+/// TODO-MAC: [100%] Linking C executable ../../osal_core_UT
+// duplicate symbol '_main' in:
+//    ../../libosal.a(bsp_start.c.o)
+//    ../../libut_bsp.a(bsp_ut.c.o)
+// ld: 1 duplicate symbol for architecture x86_64
+int __main(int argc, char *argv[])
 {
     /*
      * Initially clear the global objects
