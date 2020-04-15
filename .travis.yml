@@ -11,7 +11,7 @@ addons:
       - cmake
 
 before_install:
-  - sudo apt-get install cppcheck
+  - sudo apt-get install cppcheck ninja-build
 
 script:
   # Check versions
@@ -26,4 +26,6 @@ script:
       cat cppcheck_flight_osal.txt
       exit -1
     fi
- 
+
+  - mkdir build && cd build && cmake -G Ninja -DENABLE_UNIT_TESTS=1 -DOSAL_SYSTEM_OSTYPE=posix -DOSAL_SYSTEM_BSPTYPE=pc-linux ..
+  - ninja
