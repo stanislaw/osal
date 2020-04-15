@@ -56,7 +56,7 @@ void OS_Application_Startup(void);
 //    ../../libosal.a(bsp_start.c.o)
 //    ../../libut_bsp.a(bsp_ut.c.o)
 // ld: 1 duplicate symbol for architecture x86_64
-int __main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
    /*
    ** OS_API_Init is called by OS_Application_Startup
