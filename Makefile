@@ -30,7 +30,7 @@ build.cmake:
 	cd build.commandline.dir && cmake -G Ninja \
 		-DCMAKE_C_FLAGS="-Werror" \
 		-DENABLE_UNIT_TESTS=1 \
-		-DOSAL_SYSTEM_OSTYPE=posix \
+		-DOSAL_SYSTEM_OSTYPE=posix-mac \
 		-DOSAL_SYSTEM_BSPTYPE=pc-linux \
 		-DOSAL_INCLUDEDIR=src/bsp/pc-linux/config \
 		..
