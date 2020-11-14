@@ -18,6 +18,9 @@ target_link_libraries(osal_bsp
 # Note - although GCC understands the same flags for compile and link here, this may
 # not be true on all platforms so the compile and link flags are specified separately.
 if (NOT CMAKE_CROSSCOMPILING)
-  set(UT_COVERAGE_COMPILE_FLAGS -pg --coverage)
-  set(UT_COVERAGE_LINK_FLAGS    -pg --coverage)
+  # WIP
+#  set(UT_COVERAGE_COMPILE_FLAGS -pg --coverage)
+#  set(UT_COVERAGE_LINK_FLAGS    -pg --coverage)
+  set(UT_COVERAGE_COMPILE_FLAGS --coverage)
+  set(UT_COVERAGE_LINK_FLAGS    --coverage)
 endif()

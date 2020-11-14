@@ -32,6 +32,7 @@
  ***************************************************************************************/
 
 #include "os-posix.h"
+#include "os-shared-idmap.h"
 #include "os-shared-binsem.h"
 #include "os-impl-binsem.h"
 
@@ -60,21 +61,21 @@ OS_impl_binsem_internal_record_t OS_impl_bin_sem_table[OS_MAX_BIN_SEMAPHORES];
  ----------------------------------------------------------------------------------------*/
 int32 OS_Posix_BinSemAcquireMutex(pthread_mutex_t *mut)
 {
-    struct timespec timeout;
+  struct timespec timeout;
 
-    if (clock_gettime(CLOCK_REALTIME, &timeout) != 0)
-    {
-        return OS_SEM_FAILURE;
-    }
+  if (clock_gettime(CLOCK_REALTIME, &timeout) != 0)
+  {
+    return OS_SEM_FAILURE;
+  }
 
-    timeout.tv_sec += OS_POSIX_BINSEM_MAX_WAIT_SECONDS;
+  timeout.tv_sec += OS_POSIX_BINSEM_MAX_WAIT_SECONDS;
 
-    if (pthread_mutex_timedlock(mut, &timeout) != 0)
-    {
-        return OS_SEM_FAILURE;
-    }
+  if (pthread_mutex_timedlock(mut, &timeout) != 0)
+  {
+    return OS_SEM_FAILURE;
+  }
 
-    return OS_SUCCESS;
+  return OS_SUCCESS;
 }
 
 /*---------------------------------------------------------------------------------------
@@ -83,7 +84,7 @@ int32 OS_Posix_BinSemAcquireMutex(pthread_mutex_t *mut)
  ----------------------------------------------------------------------------------------*/
 void OS_Posix_BinSemReleaseMutex(void *mut)
 {
-    pthread_mutex_unlock(mut);
+  pthread_mutex_unlock(mut);
 }
 
 /****************************************************************************************
@@ -106,8 +107,8 @@ void OS_Posix_BinSemReleaseMutex(void *mut)
  ----------------------------------------------------------------------------------------*/
 int32 OS_Posix_BinSemAPI_Impl_Init(void)
 {
-    memset(OS_impl_bin_sem_table, 0, sizeof(OS_impl_bin_sem_table));
-    return OS_SUCCESS;
+  memset(OS_impl_bin_sem_table, 0, sizeof(OS_impl_bin_sem_table));
+  return OS_SUCCESS;
 } /* end OS_Posix_BinSemAPI_Impl_Init */
 
 /*----------------------------------------------------------------
@@ -118,117 +119,117 @@ int32 OS_Posix_BinSemAPI_Impl_Init(void)
  *           See prototype for argument/return detail
  *
  *-----------------------------------------------------------------*/
-int32 OS_BinSemCreate_Impl(uint32 sem_id, uint32 initial_value, uint32 options)
+int32 OS_BinSemCreate_Impl(const OS_object_token_t *token, uint32 initial_value, uint32 options)
 {
-    int                               ret;
-    int                               attr_created;
-    int                               mutex_created;
-    int                               cond_created;
-    int32                             return_code;
-    pthread_mutexattr_t               mutex_attr;
-    OS_impl_binsem_internal_record_t *sem;
+  int                               ret;
+  int                               attr_created;
+  int                               mutex_created;
+  int                               cond_created;
+  int32                             return_code;
+  pthread_mutexattr_t               mutex_attr;
+  OS_impl_binsem_internal_record_t *sem;
+
+  /*
+   * This preserves a bit of pre-existing functionality that was particular to binary sems:
+   * if the initial value is greater than 1 it just silently used 1 without error.
+   * (by contrast the counting semaphore will return an error)
+   */
+  if (initial_value > 1)
+  {
+    initial_value = 1;
+  }
+
+  attr_created  = 0;
+  mutex_created = 0;
+  cond_created  = 0;
+  sem           = OS_OBJECT_TABLE_GET(OS_impl_bin_sem_table, *token);
+  memset(sem, 0, sizeof(*sem));
+
+  do
+  {
+    /*
+     ** Initialize the pthread mutex attribute structure with default values
+     */
+    ret = pthread_mutexattr_init(&mutex_attr);
+    if (ret != 0)
+    {
+      OS_DEBUG("Error: pthread_mutexattr_init failed: %s\n", strerror(ret));
+      return_code = OS_SEM_FAILURE;
+      break;
+    }
+
+    /* After this point, the attr object should be destroyed before return */
+    attr_created = 1;
 
     /*
-     * This preserves a bit of pre-existing functionality that was particular to binary sems:
-     * if the initial value is greater than 1 it just silently used 1 without error.
-     * (by contrast the counting semaphore will return an error)
+     ** Use priority inheritance
      */
-    if (initial_value > 1)
+    ret = pthread_mutexattr_setprotocol(&mutex_attr, PTHREAD_PRIO_INHERIT);
+    if (ret != 0)
     {
-        initial_value = 1;
+      OS_DEBUG("Error: pthread_mutexattr_setprotocol failed: %s\n", strerror(ret));
+      return_code = OS_SEM_FAILURE;
+      break;
     }
 
-    attr_created  = 0;
-    mutex_created = 0;
-    cond_created  = 0;
-    sem           = &OS_impl_bin_sem_table[sem_id];
-    memset(sem, 0, sizeof(*sem));
-
-    do
+    /*
+     ** Initialize the mutex that is used with the condition variable
+     */
+    ret = pthread_mutex_init(&(sem->id), &mutex_attr);
+    if (ret != 0)
     {
-        /*
-         ** Initialize the pthread mutex attribute structure with default values
-         */
-        ret = pthread_mutexattr_init(&mutex_attr);
-        if (ret != 0)
-        {
-            OS_DEBUG("Error: pthread_mutexattr_init failed: %s\n", strerror(ret));
-            return_code = OS_SEM_FAILURE;
-            break;
-        }
-
-        /* After this point, the attr object should be destroyed before return */
-        attr_created = 1;
-
-        /*
-         ** Use priority inheritance
-         */
-        ret = pthread_mutexattr_setprotocol(&mutex_attr, PTHREAD_PRIO_INHERIT);
-        if (ret != 0)
-        {
-            OS_DEBUG("Error: pthread_mutexattr_setprotocol failed: %s\n", strerror(ret));
-            return_code = OS_SEM_FAILURE;
-            break;
-        }
-
-        /*
-         ** Initialize the mutex that is used with the condition variable
-         */
-        ret = pthread_mutex_init(&(sem->id), &mutex_attr);
-        if (ret != 0)
-        {
-            OS_DEBUG("Error: pthread_mutex_init failed: %s\n", strerror(ret));
-            return_code = OS_SEM_FAILURE;
-            break;
-        }
-
-        mutex_created = 1;
-
-        /*
-         ** Initialize the condition variable
-         */
-        ret = pthread_cond_init(&(sem->cv), NULL);
-        if (ret != 0)
-        {
-            OS_DEBUG("Error: pthread_cond_init failed: %s\n", strerror(ret));
-            return_code = OS_SEM_FAILURE;
-            break;
-        }
-
-        cond_created = 1;
-
-        /*
-         ** fill out the proper OSAL table fields
-         */
-
-        sem->current_value = initial_value;
-
-        return_code = OS_SUCCESS;
-    } while (0);
-
-    /* Clean up resources if the operation failed */
-    if (return_code != OS_SUCCESS)
-    {
-        if (mutex_created)
-        {
-            pthread_mutex_destroy(&(sem->id));
-        }
-        if (cond_created)
-        {
-            pthread_cond_destroy(&(sem->cv));
-        }
+      OS_DEBUG("Error: pthread_mutex_init failed: %s\n", strerror(ret));
+      return_code = OS_SEM_FAILURE;
+      break;
     }
 
-    if (attr_created)
+    mutex_created = 1;
+
+    /*
+     ** Initialize the condition variable
+     */
+    ret = pthread_cond_init(&(sem->cv), NULL);
+    if (ret != 0)
     {
-        /* Done with the attribute object -
-         * this call is a no-op in linux - but for other implementations if
-         * the create call allocated something this should free it
-         */
-        pthread_mutexattr_destroy(&mutex_attr);
+      OS_DEBUG("Error: pthread_cond_init failed: %s\n", strerror(ret));
+      return_code = OS_SEM_FAILURE;
+      break;
     }
 
-    return return_code;
+    cond_created = 1;
+
+    /*
+     ** fill out the proper OSAL table fields
+     */
+
+    sem->current_value = initial_value;
+
+    return_code = OS_SUCCESS;
+  } while (0);
+
+  /* Clean up resources if the operation failed */
+  if (return_code != OS_SUCCESS)
+  {
+    if (mutex_created)
+    {
+      pthread_mutex_destroy(&(sem->id));
+    }
+    if (cond_created)
+    {
+      pthread_cond_destroy(&(sem->cv));
+    }
+  }
+
+  if (attr_created)
+  {
+    /* Done with the attribute object -
+     * this call is a no-op in linux - but for other implementations if
+     * the create call allocated something this should free it
+     */
+    pthread_mutexattr_destroy(&mutex_attr);
+  }
+
+  return return_code;
 
 } /* end OS_BinSemCreate_Impl */
 
@@ -240,35 +241,35 @@ int32 OS_BinSemCreate_Impl(uint32 sem_id, uint32 initial_value, uint32 options)
  *           See prototype for argument/return detail
  *
  *-----------------------------------------------------------------*/
-int32 OS_BinSemDelete_Impl(uint32 sem_id)
+int32 OS_BinSemDelete_Impl(const OS_object_token_t *token)
 {
-    OS_impl_binsem_internal_record_t *sem;
-    int32                             return_code;
+  OS_impl_binsem_internal_record_t *sem;
+  int32                             return_code;
 
-    sem = &OS_impl_bin_sem_table[sem_id];
+  sem = OS_OBJECT_TABLE_GET(OS_impl_bin_sem_table, *token);
 
-    if (pthread_cond_destroy(&(sem->cv)) != 0)
-    {
-        /* sem could be busy, i.e. some task is pending on it already.
-         * that means it cannot be deleted at this time. */
-        return_code = OS_SEM_FAILURE;
-    }
-    else
-    {
-        /* Now that the CV is destroyed this sem is unusable,
-         * so we must do our best to clean everything else.  Even if cleanup
-         * does not fully work, returning anything other than OS_SUCCESS would
-         * suggest to the caller that the sem is still usable which it is not.
-         */
-        return_code = OS_SUCCESS;
+  if (pthread_cond_destroy(&(sem->cv)) != 0)
+  {
+    /* sem could be busy, i.e. some task is pending on it already.
+     * that means it cannot be deleted at this time. */
+    return_code = OS_SEM_FAILURE;
+  }
+  else
+  {
+    /* Now that the CV is destroyed this sem is unusable,
+     * so we must do our best to clean everything else.  Even if cleanup
+     * does not fully work, returning anything other than OS_SUCCESS would
+     * suggest to the caller that the sem is still usable which it is not.
+     */
+    return_code = OS_SUCCESS;
 
-        /* destroy the associated mutex --
-         * Note that this might fail if the mutex is locked,
-         * but there is no sane way to recover from that (see above). */
-        pthread_mutex_destroy(&(sem->id));
-    }
+    /* destroy the associated mutex --
+     * Note that this might fail if the mutex is locked,
+     * but there is no sane way to recover from that (see above). */
+    pthread_mutex_destroy(&(sem->id));
+  }
 
-    return return_code;
+  return return_code;
 } /* end OS_BinSemDelete_Impl */
 
 /*----------------------------------------------------------------
@@ -279,41 +280,41 @@ int32 OS_BinSemDelete_Impl(uint32 sem_id)
  *           See prototype for argument/return detail
  *
  *-----------------------------------------------------------------*/
-int32 OS_BinSemGive_Impl(uint32 sem_id)
+int32 OS_BinSemGive_Impl(const OS_object_token_t *token)
 {
-    OS_impl_binsem_internal_record_t *sem;
+  OS_impl_binsem_internal_record_t *sem;
 
-    sem = &OS_impl_bin_sem_table[sem_id];
+  sem = OS_OBJECT_TABLE_GET(OS_impl_bin_sem_table, *token);
 
-    /*
-     * Note there is a possibility that another thread is concurrently taking this sem,
-     * and has just checked the current_value but not yet inside the cond_wait call.
-     *
-     * To address this possibility - the lock must be taken here.  This is unfortunate
-     * as it means there may be a task switch when _giving_ a binary semaphore.  But the
-     * alternative of having a BinSemGive not wake up the other thread is a bigger issue.
-     *
-     * Counting sems do not suffer from this, as there is a native POSIX mechanism for those.
-     *
-     * Note: This lock should be readily available, with only minimal delay if any.
-     * If a long delay occurs here, it means something is fundamentally wrong.
-     */
+  /*
+   * Note there is a possibility that another thread is concurrently taking this sem,
+   * and has just checked the current_value but not yet inside the cond_wait call.
+   *
+   * To address this possibility - the lock must be taken here.  This is unfortunate
+   * as it means there may be a task switch when _giving_ a binary semaphore.  But the
+   * alternative of having a BinSemGive not wake up the other thread is a bigger issue.
+   *
+   * Counting sems do not suffer from this, as there is a native POSIX mechanism for those.
+   *
+   * Note: This lock should be readily available, with only minimal delay if any.
+   * If a long delay occurs here, it means something is fundamentally wrong.
+   */
 
-    /* Lock the mutex ( not the table! ) */
-    if (OS_Posix_BinSemAcquireMutex(&sem->id) != OS_SUCCESS)
-    {
-        return (OS_SEM_FAILURE);
-    }
+  /* Lock the mutex ( not the table! ) */
+  if (OS_Posix_BinSemAcquireMutex(&sem->id) != OS_SUCCESS)
+  {
+    return (OS_SEM_FAILURE);
+  }
 
-    /* Binary semaphores are always set as "1" when given */
-    sem->current_value = 1;
+  /* Binary semaphores are always set as "1" when given */
+  sem->current_value = 1;
 
-    /* unblock one thread that is waiting on this sem */
-    pthread_cond_signal(&(sem->cv));
+  /* unblock one thread that is waiting on this sem */
+  pthread_cond_signal(&(sem->cv));
 
-    pthread_mutex_unlock(&(sem->id));
+  pthread_mutex_unlock(&(sem->id));
 
-    return OS_SUCCESS;
+  return OS_SUCCESS;
 } /* end OS_BinSemGive_Impl */
 
 /*----------------------------------------------------------------
@@ -324,30 +325,30 @@ int32 OS_BinSemGive_Impl(uint32 sem_id)
  *           See prototype for argument/return detail
  *
  *-----------------------------------------------------------------*/
-int32 OS_BinSemFlush_Impl(uint32 sem_id)
+int32 OS_BinSemFlush_Impl(const OS_object_token_t *token)
 {
-    OS_impl_binsem_internal_record_t *sem;
+  OS_impl_binsem_internal_record_t *sem;
 
-    sem = &OS_impl_bin_sem_table[sem_id];
+  sem = OS_OBJECT_TABLE_GET(OS_impl_bin_sem_table, *token);
 
-    /* Lock the mutex ( not the table! ) */
-    if (OS_Posix_BinSemAcquireMutex(&sem->id) != OS_SUCCESS)
-    {
-        return (OS_SEM_FAILURE);
-    }
+  /* Lock the mutex ( not the table! ) */
+  if (OS_Posix_BinSemAcquireMutex(&sem->id) != OS_SUCCESS)
+  {
+    return (OS_SEM_FAILURE);
+  }
 
-    /* increment the flush counter.  Any other threads that are
-     * currently pending in SemTake() will see the counter change and
-     * return _without_ modifying the semaphore count.
-     */
-    ++sem->flush_request;
+  /* increment the flush counter.  Any other threads that are
+   * currently pending in SemTake() will see the counter change and
+   * return _without_ modifying the semaphore count.
+   */
+  ++sem->flush_request;
 
-    /* unblock all threads that are be waiting on this sem */
-    pthread_cond_broadcast(&(sem->cv));
+  /* unblock all threads that are be waiting on this sem */
+  pthread_cond_broadcast(&(sem->cv));
 
-    pthread_mutex_unlock(&(sem->id));
+  pthread_mutex_unlock(&(sem->id));
 
-    return OS_SUCCESS;
+  return OS_SUCCESS;
 } /* end OS_BinSemFlush_Impl */
 
 /*---------------------------------------------------------------------------------------
@@ -358,79 +359,82 @@ int32 OS_BinSemFlush_Impl(uint32 sem_id)
             becomes nonzero (via SemGive) or the semaphore gets flushed.
 
 ---------------------------------------------------------------------------------------*/
-static int32 OS_GenericBinSemTake_Impl(OS_impl_binsem_internal_record_t *sem, const struct timespec *timeout)
+static int32 OS_GenericBinSemTake_Impl(const OS_object_token_t *token, const struct timespec *timeout)
 {
-    sig_atomic_t flush_count;
-    int32        return_code;
+  sig_atomic_t                      flush_count;
+  int32                             return_code;
+  OS_impl_binsem_internal_record_t *sem;
 
-    /*
-     * Note - this lock should be quickly available - should not delay here.
-     * The main delay is in the pthread_cond_wait() below.
-     */
-    /* Lock the mutex ( not the table! ) */
-    if (OS_Posix_BinSemAcquireMutex(&sem->id) != OS_SUCCESS)
+  sem = OS_OBJECT_TABLE_GET(OS_impl_bin_sem_table, *token);
+
+  /*
+   * Note - this lock should be quickly available - should not delay here.
+   * The main delay is in the pthread_cond_wait() below.
+   */
+  /* Lock the mutex ( not the table! ) */
+  if (OS_Posix_BinSemAcquireMutex(&sem->id) != OS_SUCCESS)
+  {
+    return (OS_SEM_FAILURE);
+  }
+
+  /* because pthread_cond_wait() is also a cancellation point,
+   * this uses a cleanup handler to ensure that if canceled during this call,
+   * the mutex is also released */
+  pthread_cleanup_push(OS_Posix_BinSemReleaseMutex, &sem->id);
+
+  return_code = OS_SUCCESS;
+
+  /*
+   * Note that for vxWorks compatibility, we need to stop pending on the semaphore
+   * and return from this function under two possible circumstances:
+   *
+   *  a) the semaphore count was nonzero (may be pre-existing or due to a give)
+   *     this is the normal case, we should decrement the count by 1 and return.
+   *  b) the semaphore got "flushed"
+   *     in this case ALL tasks are un-blocked and we do NOT decrement the count.
+   */
+
+  /*
+   * first take a local snapshot of the flush request counter,
+   * if it changes, we know that someone else called SemFlush.
+   */
+  flush_count = sem->flush_request;
+
+  /* Note - the condition must be checked in a while loop because
+   * even if pthread_cond_wait() returns, it does NOT guarantee that
+   * the condition we are looking for has been met.
+   *
+   * Also if the current_value is already nonzero we will not wait.
+   */
+  while (sem->current_value == 0 && sem->flush_request == flush_count)
+  {
+    /* Must pend until something changes */
+    if (timeout == NULL)
     {
-        return (OS_SEM_FAILURE);
+      /* wait forever */
+      pthread_cond_wait(&(sem->cv), &(sem->id));
     }
-
-    /* because pthread_cond_wait() is also a cancellation point,
-     * this uses a cleanup handler to ensure that if canceled during this call,
-     * the mutex is also released */
-    pthread_cleanup_push(OS_Posix_BinSemReleaseMutex, &sem->id);
-
-    return_code = OS_SUCCESS;
-
-    /*
-     * Note that for vxWorks compatibility, we need to stop pending on the semaphore
-     * and return from this function under two possible circumstances:
-     *
-     *  a) the semaphore count was nonzero (may be pre-existing or due to a give)
-     *     this is the normal case, we should decrement the count by 1 and return.
-     *  b) the semaphore got "flushed"
-     *     in this case ALL tasks are un-blocked and we do NOT decrement the count.
-     */
-
-    /*
-     * first take a local snapshot of the flush request counter,
-     * if it changes, we know that someone else called SemFlush.
-     */
-    flush_count = sem->flush_request;
-
-    /* Note - the condition must be checked in a while loop because
-     * even if pthread_cond_wait() returns, it does NOT guarantee that
-     * the condition we are looking for has been met.
-     *
-     * Also if the current_value is already nonzero we will not wait.
-     */
-    while (sem->current_value == 0 && sem->flush_request == flush_count)
+    else if (pthread_cond_timedwait(&(sem->cv), &(sem->id), timeout) == ETIMEDOUT)
     {
-        /* Must pend until something changes */
-        if (timeout == NULL)
-        {
-            /* wait forever */
-            pthread_cond_wait(&(sem->cv), &(sem->id));
-        }
-        else if (pthread_cond_timedwait(&(sem->cv), &(sem->id), timeout) == ETIMEDOUT)
-        {
-            return_code = OS_SEM_TIMEOUT;
-            break;
-        }
+      return_code = OS_SEM_TIMEOUT;
+      break;
     }
+  }
 
-    /* If the flush counter did not change, set the value to zero */
-    if (return_code == OS_SUCCESS && sem->flush_request == flush_count)
-    {
-        sem->current_value = 0;
-    }
+  /* If the flush counter did not change, set the value to zero */
+  if (return_code == OS_SUCCESS && sem->flush_request == flush_count)
+  {
+    sem->current_value = 0;
+  }
 
-    /*
-     * Pop the cleanup handler.
-     * Passing "true" means it will be executed, which
-     * handles releasing the mutex.
-     */
-    pthread_cleanup_pop(true);
+  /*
+   * Pop the cleanup handler.
+   * Passing "true" means it will be executed, which
+   * handles releasing the mutex.
+   */
+  pthread_cleanup_pop(true);
 
-    return return_code;
+  return return_code;
 } /* end OS_GenericBinSemTake_Impl */
 
 /*----------------------------------------------------------------
@@ -441,9 +445,9 @@ static int32 OS_GenericBinSemTake_Impl(OS_impl_binsem_internal_record_t *sem, co
  *           See prototype for argument/return detail
  *
  *-----------------------------------------------------------------*/
-int32 OS_BinSemTake_Impl(uint32 sem_id)
+int32 OS_BinSemTake_Impl(const OS_object_token_t *token)
 {
-    return (OS_GenericBinSemTake_Impl(&OS_impl_bin_sem_table[sem_id], NULL));
+  return (OS_GenericBinSemTake_Impl(token, NULL));
 } /* end OS_BinSemTake_Impl */
 
 /*----------------------------------------------------------------
@@ -454,16 +458,16 @@ int32 OS_BinSemTake_Impl(uint32 sem_id)
  *           See prototype for argument/return detail
  *
  *-----------------------------------------------------------------*/
-int32 OS_BinSemTimedWait_Impl(uint32 sem_id, uint32 msecs)
+int32 OS_BinSemTimedWait_Impl(const OS_object_token_t *token, uint32 msecs)
 {
-    struct timespec ts;
+  struct timespec ts;
 
-    /*
-     ** Compute an absolute time for the delay
-     */
-    OS_Posix_CompAbsDelayTime(msecs, &ts);
+  /*
+   ** Compute an absolute time for the delay
+   */
+  OS_Posix_CompAbsDelayTime(msecs, &ts);
 
-    return (OS_GenericBinSemTake_Impl(&OS_impl_bin_sem_table[sem_id], &ts));
+  return (OS_GenericBinSemTake_Impl(token, &ts));
 } /* end OS_BinSemTimedWait_Impl */
 
 /*----------------------------------------------------------------
@@ -474,9 +478,13 @@ int32 OS_BinSemTimedWait_Impl(uint32 sem_id, uint32 msecs)
  *           See prototype for argument/return detail
  *
  *-----------------------------------------------------------------*/
-int32 OS_BinSemGetInfo_Impl(uint32 sem_id, OS_bin_sem_prop_t *sem_prop)
+int32 OS_BinSemGetInfo_Impl(const OS_object_token_t *token, OS_bin_sem_prop_t *sem_prop)
 {
-    /* put the info into the stucture */
-    sem_prop->value = OS_impl_bin_sem_table[sem_id].current_value;
-    return OS_SUCCESS;
+  OS_impl_binsem_internal_record_t *sem;
+
+  sem = OS_OBJECT_TABLE_GET(OS_impl_bin_sem_table, *token);
+
+  /* put the info into the stucture */
+  sem_prop->value = sem->current_value;
+  return OS_SUCCESS;
 } /* end OS_BinSemGetInfo_Impl */

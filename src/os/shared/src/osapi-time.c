@@ -36,6 +36,7 @@
 #include <string.h>
 #include <time.h>
 #include <limits.h>
+#include <assert.h>
 
 /*
  * User defined include files

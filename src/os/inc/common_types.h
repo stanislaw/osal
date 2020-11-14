@@ -64,7 +64,10 @@ extern "C"
 #define _EXTENSION_     __extension__
 #define OS_PACK         __attribute__((packed))
 #define OS_ALIGN(n)     __attribute__((aligned(n)))
+// WIP: Exists on macOS
+#ifndef OS_USED
 #define OS_USED         __attribute__((used))
+#endif
 #define OS_PRINTF(n, m) __attribute__((format(printf, n, m)))
 #else
 #define _EXTENSION_

@@ -4,8 +4,12 @@
 #
 ######################################################################
 
+add_subdirectory(posix-macos-addons)
+
 # This CMake script generates targets specific to the POSIX implementation
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/inc)
+
+set(POSIX_BASE_MAIN_SRCLIST_DIR ${CMAKE_SOURCE_DIR}/src/os/posix/src)
 
 # The basic set of files which are always built
 set(POSIX_BASE_SRCLIST
@@ -16,11 +20,11 @@ set(POSIX_BASE_SRCLIST
     src/os-impl-dirs.c
     src/os-impl-errors.c
     src/os-impl-files.c
-    src/os-impl-filesys.c
+    ${POSIX_BASE_MAIN_SRCLIST_DIR}/os-impl-filesys.c
     src/os-impl-heap.c
     src/os-impl-idmap.c
     src/os-impl-mutex.c
-    src/os-impl-queues.c
+    ${POSIX_BASE_MAIN_SRCLIST_DIR}/os-impl-queues.c
     src/os-impl-tasks.c
     src/os-impl-timebase.c
 )
@@ -79,3 +83,15 @@ add_library(osal_posixmacos_impl OBJECT
     ${POSIX_BASE_SRCLIST}
     ${POSIX_IMPL_SRCLIST}
 )
+
+target_link_libraries(osal_posixmacos_impl PUBLIC posix-macos-addons)
+
+
+# TODO-MAC: Defining this globally but can be made more focused.
+# 1) In file included from /sandbox/cFS/osal/src/os/posix/osloader.c:32:
+#/sandbox/cFS/osal/src/os/posix/../portable/os-impl-posix-dl.c:130:30: error: use of undeclared identifier 'RTLD_DEFAULT'
+#    Function = dlsym((void *)RTLD_DEFAULT, SymbolName);
+#                             ^
+# 2) /usr/include/sys/ucred.h:96:11: error: unknown type name 'u_long'; did you mean 'long'?
+#        volatile u_long         cr_ref;  /* reference count */
+target_compile_definitions(osal_posixmacos_impl PRIVATE -D_DARWIN_C_SOURCE)

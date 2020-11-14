@@ -48,7 +48,7 @@
  *
  * This is shared by all OSAL entities that perform low-level I/O.
  */
-OS_Posix_file_internal_record_t OS_impl_filehandle_table[OS_MAX_NUM_OPEN_FILES];
+OS_impl_file_internal_record_t OS_impl_filehandle_table[OS_MAX_NUM_OPEN_FILES];
 
 /*
  * These two constants (EUID and EGID) are local cache of the
@@ -85,19 +85,19 @@ const int OS_IMPL_REGULAR_FILE_FLAGS = O_NONBLOCK;
  ---------------------------------------------------------------------------------------*/
 int32 OS_Posix_StreamAPI_Impl_Init(void)
 {
-    uint32 local_id;
+  osal_index_t local_id;
 
-    /*
-     * init all filehandles to -1, which is always invalid.
-     * this isn't strictly necessary but helps when debugging.
-     */
-    for (local_id = 0; local_id < OS_MAX_NUM_OPEN_FILES; ++local_id)
-    {
-        OS_impl_filehandle_table[local_id].fd = -1;
-    }
+  /*
+   * init all filehandles to -1, which is always invalid.
+   * this isn't strictly necessary but helps when debugging.
+   */
+  for (local_id = 0; local_id < OS_MAX_NUM_OPEN_FILES; ++local_id)
+  {
+    OS_impl_filehandle_table[local_id].fd = -1;
+  }
 
-    OS_IMPL_SELF_EUID = geteuid();
-    OS_IMPL_SELF_EGID = getegid();
+  OS_IMPL_SELF_EUID = geteuid();
+  OS_IMPL_SELF_EGID = getegid();
 
-    return OS_SUCCESS;
+  return OS_SUCCESS;
 } /* end OS_Posix_StreamAPI_Impl_Init */

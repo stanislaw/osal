@@ -144,7 +144,9 @@ if (DEFINED OSAL_EXPECTED_OSTYPE)
     elseif(NOT OSAL_SYSTEM_OSTYPE STREQUAL OSAL_EXPECTED_OSTYPE)
         # Generate a warning about the OSTYPE not being expected.
         # Not calling this a fatal error because it could possibly be intended during development
-        message(WARNING "Mismatched BSP/OS: ${OSAL_SYSTEM_BSPTYPE} implies ${OSAL_EXPECTED_OSTYPE}, but ${OSAL_SYSTEM_OSTYPE} is configured")
+
+        # WIP
+        # message(WARNING "Mismatched BSP/OS: ${OSAL_SYSTEM_BSPTYPE} implies ${OSAL_EXPECTED_OSTYPE}, but ${OSAL_SYSTEM_OSTYPE} is configured")
     endif(NOT DEFINED OSAL_SYSTEM_OSTYPE)
 endif (DEFINED OSAL_EXPECTED_OSTYPE)
 
@@ -276,7 +278,7 @@ target_include_directories(osal PRIVATE
 )
 
 # Link the OSAL with the BSP
-target_link_libraries(osal osal_bsp)
+target_link_libraries(osal osal_bsp posix-macos-addons)
 
 # propagate the BSP-specific compile flags to OSAL external library target, if defined
 if (OSAL_BSP_COMPILE_DEFINITIONS)
