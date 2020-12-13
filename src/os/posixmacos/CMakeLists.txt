@@ -17,8 +17,8 @@ include_directories(${POSIX_BASE_MAIN_INCLIST_DIR})
 # The basic set of files which are always built
 set(POSIX_BASE_SRCLIST
     src/os-impl-binsem.c
-    src/os-impl-common.c
-    src/os-impl-console.c
+    ${POSIX_BASE_MAIN_SRCLIST_DIR}/os-impl-common.c
+    ${POSIX_BASE_MAIN_SRCLIST_DIR}/os-impl-console.c
     src/os-impl-countsem.c
     src/os-impl-dirs.c
     src/os-impl-errors.c
@@ -26,7 +26,7 @@ set(POSIX_BASE_SRCLIST
     ${POSIX_BASE_MAIN_SRCLIST_DIR}/os-impl-filesys.c
     src/os-impl-heap.c
     src/os-impl-idmap.c
-    src/os-impl-mutex.c
+    ${POSIX_BASE_MAIN_SRCLIST_DIR}/os-impl-mutex.c
     ${POSIX_BASE_MAIN_SRCLIST_DIR}/os-impl-queues.c
     src/os-impl-tasks.c
     src/os-impl-timebase.c
@@ -45,7 +45,7 @@ set(POSIX_IMPL_SRCLIST
 
 if (OSAL_CONFIG_INCLUDE_SHELL)
     list(APPEND POSIX_IMPL_SRCLIST
-       src/os-impl-shell.c
+      ${POSIX_BASE_MAIN_SRCLIST_DIR}/os-impl-shell.c
     )
 else ()
     list(APPEND POSIX_IMPL_SRCLIST
@@ -63,7 +63,7 @@ if (OSAL_CONFIG_INCLUDE_DYNAMIC_LOADER)
     )
 else ()
     list(APPEND POSIX_IMPL_SRCLIST
-        src/os-impl-no-module.c
+      ${POSIX_BASE_MAIN_SRCLIST_DIR}/os-impl-no-module.c
         ../portable/os-impl-no-loader.c
         ../portable/os-impl-no-symtab.c
     )
