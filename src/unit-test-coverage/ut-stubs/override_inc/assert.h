@@ -28,7 +28,5 @@
 /* mappings for declarations in assert.h */
 /* ----------------------------------------- */
 
-//#define assert OCS_assert
-#define assert(e) ((e) ? (true) : (printf("%s %s:%d\n", #e, __FILE__, __LINE__)))
 
 #endif  /* OSAL_OVERRIDE_ASSERT_H */

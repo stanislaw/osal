@@ -23,7 +23,6 @@
 */
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
 #include "common_types.h"
 #include "osapi.h"
 #include "utassert.h"
@@ -233,8 +232,6 @@ void BinSemSetup(void)
     ** Create a timer
     */
     status = OS_TimerCreate(&timer_id, "Timer 1", &accuracy, &(TimerFunction));
-    assert(status == OS_SUCCESS);
-
     UtAssert_True(status == OS_SUCCESS, "Timer 1 create Id=%lx Rc=%d", OS_ObjectIdToInteger(timer_id), (int)status);
     UtPrintf("Timer Accuracy = %u microseconds \n", (unsigned int)accuracy);
 
