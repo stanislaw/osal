@@ -20,12 +20,12 @@ set(POSIX_BASE_SRCLIST
     ${POSIX_BASE_MAIN_SRCLIST_DIR}/os-impl-common.c
     ${POSIX_BASE_MAIN_SRCLIST_DIR}/os-impl-console.c
     src/os-impl-countsem.c
-    src/os-impl-dirs.c
-    src/os-impl-errors.c
-    src/os-impl-files.c
+    ${POSIX_BASE_MAIN_SRCLIST_DIR}/os-impl-dirs.c
+    ${POSIX_BASE_MAIN_SRCLIST_DIR}/os-impl-errors.c
+    ${POSIX_BASE_MAIN_SRCLIST_DIR}/os-impl-files.c
     ${POSIX_BASE_MAIN_SRCLIST_DIR}/os-impl-filesys.c
-    src/os-impl-heap.c
-    src/os-impl-idmap.c
+    ${POSIX_BASE_MAIN_SRCLIST_DIR}/os-impl-heap.c
+    ${POSIX_BASE_MAIN_SRCLIST_DIR}/os-impl-idmap.c
     ${POSIX_BASE_MAIN_SRCLIST_DIR}/os-impl-mutex.c
     ${POSIX_BASE_MAIN_SRCLIST_DIR}/os-impl-queues.c
     src/os-impl-tasks.c
@@ -57,7 +57,7 @@ endif ()
 # then build the module loader
 if (OSAL_CONFIG_INCLUDE_DYNAMIC_LOADER)
     list(APPEND POSIX_IMPL_SRCLIST
-        src/os-impl-loader.c
+        ${POSIX_BASE_MAIN_SRCLIST_DIR}/os-impl-loader.c
         ../portable/os-impl-posix-dl-loader.c
         ../portable/os-impl-posix-dl-symtab.c
     )
