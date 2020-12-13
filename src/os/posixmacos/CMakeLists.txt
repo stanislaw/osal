@@ -7,9 +7,12 @@
 add_subdirectory(posix-macos-addons)
 
 # This CMake script generates targets specific to the POSIX implementation
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/inc)
-
+set(POSIX_BASE_MAIN_INCLIST_DIR ${CMAKE_SOURCE_DIR}/src/os/posix/inc)
 set(POSIX_BASE_MAIN_SRCLIST_DIR ${CMAKE_SOURCE_DIR}/src/os/posix/src)
+
+# include_directories(${CMAKE_CURRENT_SOURCE_DIR}/inc)
+include_directories(${POSIX_BASE_MAIN_INCLIST_DIR})
+
 
 # The basic set of files which are always built
 set(POSIX_BASE_SRCLIST

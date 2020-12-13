@@ -18,7 +18,7 @@ set(VXWORKS_MODULE_LIST
     shell
     symtab
     tasks
-    timebase
+    # timebase
 )
 
 set(VXWORKS_PORTABLE_BLOCK_LIST
