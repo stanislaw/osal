@@ -16,7 +16,7 @@ include_directories(${POSIX_BASE_MAIN_INCLIST_DIR})
 
 # The basic set of files which are always built
 set(POSIX_BASE_SRCLIST
-    src/os-impl-binsem.c
+    ${POSIX_BASE_MAIN_SRCLIST_DIR}/os-impl-binsem.c
     ${POSIX_BASE_MAIN_SRCLIST_DIR}/os-impl-common.c
     ${POSIX_BASE_MAIN_SRCLIST_DIR}/os-impl-console.c
     src/os-impl-countsem.c
