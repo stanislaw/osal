@@ -1,0 +1,3 @@
+[submodule "src/os/posixmacos/posix-macos-addons"]
+	path = src/os/posixmacos/posix-macos-addons
+	url = git@github.com:stanislaw/posix-macos-addons.git
